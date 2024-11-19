@@ -1,13 +1,30 @@
 name: miraca
 channels:
   - conda-forge
+  - bioconda
 dependencies:
-  - python>=3.11
-  - shapely>=2.0
-  - geopandas
-  - jupyter
-  - rasterio
-  - xarray
-  - pytest
+  - python=3.12
   - black
+  - geopandas
+  - ipykernel
+  - jupyter
+  - m2r2
+  - make
+  - mypy
+  - pandas
+  - pre-commit
+  - pyarrow
+  - pytest
+  - pytest-cov
+  - python-igraph=0.11.*
+  - rasterio
+  - requests
   - ruff
+  - scikit-learn
+  - snkit
+  - sphinx
+  - tqdm
+  - pip
+  - pip:
+    - nismod-snail
+    - -e . # editable install of nird package
