@@ -1,0 +1,11 @@
+The model inputs include: 
+- nuts3.pq: spatial admin units
+- etisplus_road_links.pq: 2010 etisplus motorways links
+- etisplus_road_nodes.pq: 2010 etisplus motorways nodes
+- sample_p_transport_car.csv: 1000 sampled records from ETIS2010 OD file
+- model parameters: 
+  - flow_breakpoint_dict.json
+  - flow_cap_dict.json
+  - free_flow_speed_dict.json
+  - min_speed_cap.json
+  - urban_speed_cap.json
