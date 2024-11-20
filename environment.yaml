@@ -24,7 +24,7 @@ dependencies:
   - snkit
   - sphinx
   - tqdm
+  - xarray
   - pip
   - pip:
     - nismod-snail
-    - -e . # editable install of nird package
