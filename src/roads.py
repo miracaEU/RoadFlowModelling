@@ -10,8 +10,7 @@ import pandas as pd
 import geopandas as gpd  # type: ignore
 import igraph  # type: ignore
 
-import nird.constants as cons
-from nird.utils import get_flow_on_edges
+
 
 from multiprocessing import Pool
 import warnings
@@ -20,6 +19,10 @@ import time
 
 warnings.simplefilter("ignore")
 
+CONV_METER_TO_MILE = 0.000621371
+CONV_MILE_TO_KM = 1.60934
+CONV_KM_TO_MILE = 0.621371
+PENCE_TO_POUND = 0.01
 
 def select_partial_roads(
     road_links: gpd.GeoDataFrame,
@@ -220,9 +223,9 @@ def voc_func(speed: float) -> float:
     float
         The unit vehicle operating cost: £/km
     """
-    s = speed * cons.CONV_MILE_TO_KM  # km/hour
+    s = speed * CONV_MILE_TO_KM  # km/hour
     lpkm = 0.178 - 0.00299 * s + 0.0000205 * (s**2)  # fuel consumption (liter/km)
-    uvoc = 140 * lpkm * cons.PENCE_TO_POUND  # average petrol cost: 140 pence/liter
+    uvoc = 140 * lpkm * PENCE_TO_POUND  # average petrol cost: 140 pence/liter
     return uvoc
 
 
@@ -254,7 +257,7 @@ def cost_func(
     """
     ave_occ = 1.06  # average car occupancy = 1.6
     vot = 17.69  # value of time (VOT): 17.69 £/hour
-    d = distance * cons.CONV_MILE_TO_KM
+    d = distance * CONV_MILE_TO_KM
     c_time = time * ave_occ * vot
     c_operate = d * voc
     cost = time * ave_occ * vot + d * voc + toll
@@ -468,7 +471,7 @@ def create_igraph_network(
     edgeNameList = road_links["e_id"].tolist()
     edgeList = list(zip(road_links.from_id, road_links.to_id))
     edgeLengthList = (
-        road_links.geometry.length * cons.CONV_METER_TO_MILE
+        road_links.geometry.length * CONV_METER_TO_MILE
     ).tolist()  # mile
     edgeTollList = road_links.average_toll_cost.tolist()  # £
     edgeSpeedList = road_links.initial_flow_speeds.tolist()  # mph
@@ -809,6 +812,49 @@ def worker_init_edge(shared_network_pkl: bytes, shared_weight_pkl: bytes) -> Non
     edge_weight_df = pickle.loads(shared_weight_pkl)
     return None
 
+def get_flow_on_edges(
+    save_paths_df: pd.DataFrame,
+    edge_id_column: str,
+    edge_path_column: str,
+    flow_column: str,
+) -> pd.DataFrame:
+    """Get flows from paths onto edges
+    Parameters
+    ---------
+    save_paths_df
+        Pandas DataFrame of OD flow paths and their flow values
+    edge_id_column
+        String name of ID column of edge dataset
+    edge_path_column
+        String name of column which contains edge paths
+    flow_column
+        String name of column which contains flow values
+    Result
+    -------
+    DataFrame with edge_ids and their total flows
+    """
+    """Example:
+        save_path_df:
+            origin_id | destination_id | edge_path          |  flux (or traffic)
+            node_1      node_2          ['edge_1','edge_2']     10
+            node_1      node_3          ['edge_1','edge_3']     20
+        edge_id_column = "edge_id"
+        edge_path_column = "edge_path"
+        flow_column = "traffic"
+        Result
+            edge_id | flux (or traffic)
+            edge_1      30
+            edge_2      10
+            edge_3      20
+    """
+    edge_flows: Dict[str, float] = defaultdict(float)
+    for row in save_paths_df.itertuples():
+        for item in getattr(row, edge_path_column):
+            edge_flows[item] += getattr(row, flow_column)
+
+    return pd.DataFrame(
+        [(k, v) for k, v in edge_flows.items()], columns=[edge_id_column, flow_column]
+    )
 
 def network_flow_model(
     road_links: gpd.GeoDataFrame,
@@ -911,7 +957,7 @@ def network_flow_model(
     # road link properties
     edge_cbtype_dict = road_links.set_index("e_id")["combined_label"].to_dict()
     edge_length_dict = (
-        road_links.set_index("e_id")["geometry"].length * cons.CONV_METER_TO_MILE
+        road_links.set_index("e_id")["geometry"].length * CONV_METER_TO_MILE
     ).to_dict()
     acc_flow_dict = road_links.set_index("e_id")["acc_flow"].to_dict()
     acc_capacity_dict = road_links.set_index("e_id")["acc_capacity"].to_dict()
