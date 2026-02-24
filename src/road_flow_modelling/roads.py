@@ -11,7 +11,6 @@ import geopandas as gpd  # type: ignore
 import igraph  # type: ignore
 
 
-
 from multiprocessing import Pool
 import warnings
 import pickle
@@ -23,6 +22,7 @@ CONV_METER_TO_MILE = 0.000621371
 CONV_MILE_TO_KM = 1.60934
 CONV_KM_TO_MILE = 0.621371
 PENCE_TO_POUND = 0.01
+
 
 def select_partial_roads(
     road_links: gpd.GeoDataFrame,
@@ -470,9 +470,7 @@ def create_igraph_network(
     nodeList = [(node.nd_id) for _, node in road_nodes.iterrows()]
     edgeNameList = road_links["e_id"].tolist()
     edgeList = list(zip(road_links.from_id, road_links.to_id))
-    edgeLengthList = (
-        road_links.geometry.length * CONV_METER_TO_MILE
-    ).tolist()  # mile
+    edgeLengthList = (road_links.geometry.length * CONV_METER_TO_MILE).tolist()  # mile
     edgeTollList = road_links.average_toll_cost.tolist()  # £
     edgeSpeedList = road_links.initial_flow_speeds.tolist()  # mph
 
@@ -737,7 +735,7 @@ def find_least_cost_path(
 
 
 def compute_edge_costs(
-    edge_weight_df, # added
+    edge_weight_df,  # added
     path: List[int],
 ) -> Tuple[float, float, float]:
     """Calculate the total travel cost for the path
@@ -812,6 +810,7 @@ def worker_init_edge(shared_network_pkl: bytes, shared_weight_pkl: bytes) -> Non
     edge_weight_df = pickle.loads(shared_weight_pkl)
     return None
 
+
 def get_flow_on_edges(
     save_paths_df: pd.DataFrame,
     edge_id_column: str,
@@ -855,6 +854,7 @@ def get_flow_on_edges(
     return pd.DataFrame(
         [(k, v) for k, v in edge_flows.items()], columns=[edge_id_column, flow_column]
     )
+
 
 def network_flow_model(
     road_links: gpd.GeoDataFrame,
@@ -981,7 +981,7 @@ def network_flow_model(
         print(f"No.{iter_flag} iteration starts:")
         # dump the network and edge weight for shared use in multiprocessing
         shared_network_pkl = pickle.dumps(network)
-        
+
         # find the least-cost for each OD trip
         list_of_spath = []
         args = []
@@ -1057,7 +1057,7 @@ def network_flow_model(
 
         # calculate edge flows
         temp_edge_flow = get_flow_on_edges(temp_flow_matrix, "e_id", "path", "flow")
-        
+
         # add/update edge attributes
         temp_edge_flow["combined_label"] = temp_edge_flow["e_id"].map(edge_cbtype_dict)
         temp_edge_flow["initial_flow_speeds"] = temp_edge_flow["e_id"].map(
